@@ -132,8 +132,8 @@ button:disabled {
 }
 
 .slab--setup {
-  justify-content: space-between;
-  gap: 1.5rem;
+  justify-content: flex-start;
+  gap: 1.35rem;
   padding-top: max(1.75rem, env(safe-area-inset-top));
   padding-bottom: max(1.75rem, env(safe-area-inset-bottom));
 }
@@ -209,14 +209,14 @@ button:disabled {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.7rem;
-  flex: 1;
-  align-content: center;
+  margin-top: 0.5rem;
 }
 
 .setup-custom {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+  margin-top: auto;
 }
 
 .field-label {
@@ -377,8 +377,8 @@ button:disabled {
 }
 
 .chip--xl {
-  min-height: 5.5rem;
-  font-size: clamp(1.6rem, 7vw, 2rem);
+  min-height: 4.75rem;
+  font-size: clamp(1.55rem, 7vw, 1.95rem);
   font-weight: 700;
   background: linear-gradient(180deg, #15263a 0%, var(--board) 100%);
 }
