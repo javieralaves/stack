@@ -649,3 +649,166 @@ button:disabled {
     transition: none;
   }
 }
+
+/* ——— Room multiplayer ——— */
+
+.room-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.room-entry-toggle {
+  min-height: 3.2rem;
+  width: 100%;
+  border: 2px solid var(--citrus);
+  border-radius: 4px;
+  background: rgba(214, 255, 63, 0.08);
+  color: var(--citrus);
+  font-family: var(--font-brand);
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.room-entry-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.85rem 0.75rem 1rem;
+  border: 1px solid var(--rail);
+  border-radius: 4px;
+  background: rgba(5, 9, 16, 0.45);
+}
+
+.room-entry-copy {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  color: var(--ink-dim);
+}
+
+.room-entry-join {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+}
+
+.chips--tight {
+  gap: 0.4rem;
+}
+
+.chips--tight .chip {
+  min-height: 3rem;
+  font-size: 1.05rem;
+}
+
+.setup-presets--compact {
+  margin-top: 0;
+}
+
+.banner-error {
+  margin: 0;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--signal) 55%, transparent);
+  border-radius: 4px;
+  background: rgba(255, 75, 46, 0.12);
+  color: #ffb4a6;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.share-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.btn--share {
+  min-height: 2.8rem;
+  width: 100%;
+  border: 1px solid var(--rail);
+  background: var(--glass-strong);
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.share-url {
+  font-family: var(--font-score);
+  font-size: 0.78rem;
+  color: var(--mute);
+  word-break: break-all;
+}
+
+.score-value--pot {
+  color: var(--ink);
+}
+
+.seat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.seat {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.45rem;
+  align-items: baseline;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--rail);
+  border-radius: 4px;
+  background: var(--glass);
+  font-size: 0.92rem;
+}
+
+.seat.is-me {
+  border-color: color-mix(in srgb, var(--citrus) 55%, var(--rail));
+  background: rgba(214, 255, 63, 0.08);
+}
+
+.seat.is-folded {
+  opacity: 0.55;
+}
+
+.seat-name {
+  font-family: var(--font-brand);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.seat-stack {
+  font-family: var(--font-score);
+  font-variant-numeric: tabular-nums;
+  color: var(--citrus);
+}
+
+.seat-bet {
+  font-family: var(--font-score);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+  min-width: 3.5rem;
+  text-align: right;
+}
+
+.btn--fold {
+  min-height: 3.6rem;
+  width: 100%;
+  border: 2px solid var(--rail);
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 1.15rem;
+  box-shadow: none;
+}
+
+.btn--fold:active:not(:disabled) {
+  transform: scale(0.98);
+  color: var(--ink);
+}
