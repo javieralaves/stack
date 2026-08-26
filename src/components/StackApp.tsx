@@ -10,6 +10,7 @@ import {
   STACK_PRESETS,
   type StackState,
 } from "@/lib/storage";
+import { RoomEntry } from "@/components/RoomEntry";
 
 type Mode = "bet" | "collect";
 
@@ -197,10 +198,14 @@ export function StackApp() {
         <header className="slab-head">
           <p className="brand">STACK</p>
           <p className="lede">
-            Javier &amp; friends — set tonight&apos;s points, then play round by
-            round. Sample points only. No money. Phones face-up on the table.
+            Javier &amp; friends — solo on this phone, or open a shared room for
+            the table. Sample points only. No money.
           </p>
         </header>
+
+        <RoomEntry defaultStack={state.stack || 1000} />
+
+        <p className="field-label">Solo stack</p>
 
         <div className="setup-presets" role="group" aria-label="Stack presets">
           {STACK_PRESETS.map((amount) => (
@@ -300,9 +305,10 @@ export function StackApp() {
           <span className="round-street">this street</span>
         </p>
         <p className="lede lede--tight">
-          Bet each street. Collect if you win. Next round clears this-round bets.
+          Solo phone. Bet each street. Or open a table room to share one pot.
           Sample only — no real money.
         </p>
+        <RoomEntry defaultStack={state.stack || 1000} />
       </header>
 
       <section className="scoreboard" aria-live="polite">

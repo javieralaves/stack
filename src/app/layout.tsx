@@ -23,7 +23,7 @@ const ui = Manrope({
 export const metadata: Metadata = {
   title: "Stack — points for the table tonight",
   description:
-    "Phone-first poker points for Javier and friends. Set a stack, bet each street, collect when you win. Sample points only — no accounts, no money.",
+    "Phone-first poker points for Javier and friends. Solo or shared room with a common pot. Sample points only — no accounts, no money.",
   applicationName: "Stack",
   appleWebApp: {
     capable: true,

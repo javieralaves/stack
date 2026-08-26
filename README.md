@@ -1,16 +1,40 @@
 # Stack
 
-Phone-first poker points for Javier and friends at one table. Each phone opens the same URL. No accounts. No shared backend. No real money — sample points only.
+Phone-first poker points for Javier and friends at one table. Sample points only — no accounts, no real money.
 
-## Tonight
+## Solo (`/`)
 
-1. Open the app on your phone (face-up on the table).
-2. **Set stack** — pick a starting points total.
-3. Each **round / street**, pick an amount and **Commit**. This-round bets stay visible.
-4. When you win, **Collect** (chips or a custom pot amount).
-5. **Next round** after collect or fold — clears this-round bets; stack stays.
+Works offline in the browser. Set stack, bet each street, collect, next round. Persists in `localStorage`.
 
-Stack, round, this-round bet, and last bet persist in `localStorage` on that phone.
+## Table room (`/r/[CODE]`)
+
+Shared round + common pot across phones.
+
+1. On `/`, open **Play with the table** → enter first name → **Start room**.
+2. Copy invite / text the short code + URL to buddies.
+3. Buddies open `/r/CODE`, sit with a first name + stack.
+4. **Commit** bets into the common pot, or **Fold street**.
+5. Winner **Collect**s from the pot (chips, pot shortcut, or custom ≤ pot).
+6. **Next round** clears pot/folds; stacks stay; same room.
+
+Polling every ~1.5s. Max 4 seats (designed for 3).
+
+### Room store env (required for rooms in production)
+
+Serverless Vercel cannot keep an in-memory Map. Rooms use Upstash Redis (Vercel KV-compatible REST).
+
+Set **one** of these pairs on the existing personal-team `stack` project:
+
+| Preferred | Also accepted |
+| --- | --- |
+| `STACK_KV_REST_URL` | `KV_REST_API_URL` or `UPSTASH_REDIS_REST_URL` |
+| `STACK_KV_REST_TOKEN` | `KV_REST_API_TOKEN` or `UPSTASH_REDIS_REST_TOKEN` |
+
+Create a free Upstash Redis DB → copy REST URL + token into Vercel → redeploy.
+
+Without those env vars, `/` solo mode still works; room APIs return 503.
+
+Local `next dev` uses an in-memory room store when Redis env is unset (`STACK_ROOM_MEMORY=1` forces it).
 
 ## Dev
 
