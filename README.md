@@ -6,10 +6,11 @@ Phone-first poker points for Javier and friends at one table. Each phone opens t
 
 1. Open the app on your phone (face-up on the table).
 2. **Set stack** — pick a starting points total.
-3. Each street, pick an amount and **Commit**.
-4. When you win, switch to **Collect** and pull points back.
+3. Each **round / street**, pick an amount and **Commit**. This-round bets stay visible.
+4. When you win, **Collect** (chips or a custom pot amount).
+5. **Next round** after collect or fold — clears this-round bets; stack stays.
 
-Stack and last bet persist in `localStorage` on that phone.
+Stack, round, this-round bet, and last bet persist in `localStorage` on that phone.
 
 ## Dev
 

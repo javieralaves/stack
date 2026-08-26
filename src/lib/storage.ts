@@ -9,6 +9,10 @@ export type StackState = {
   selectedBet: number;
   /** True after the night's stack has been set at least once. */
   started: boolean;
+  /** 1-based street/hand counter for tonight. */
+  round: number;
+  /** Points this player has bet in the current round. */
+  roundBet: number;
 };
 
 export const DEFAULT_STATE: StackState = {
@@ -16,6 +20,8 @@ export const DEFAULT_STATE: StackState = {
   lastBet: 0,
   selectedBet: 100,
   started: false,
+  round: 1,
+  roundBet: 0,
 };
 
 export const STACK_PRESETS = [500, 1000, 2500, 5000] as const;
@@ -33,6 +39,8 @@ export function loadState(): StackState {
       lastBet: floorNonNeg(Number(parsed.lastBet)),
       selectedBet: Math.max(1, floorNonNeg(Number(parsed.selectedBet)) || 100),
       started: Boolean(parsed.started),
+      round: Math.max(1, floorNonNeg(Number(parsed.round)) || 1),
+      roundBet: floorNonNeg(Number(parsed.roundBet)),
     };
   } catch {
     return DEFAULT_STATE;

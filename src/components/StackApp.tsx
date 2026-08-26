@@ -70,6 +70,12 @@ function markHydrated() {
   for (const listener of hydrationListeners) listener();
 }
 
+function parsePositiveInt(raw: string): number | null {
+  const n = Math.floor(Number(raw.replace(/,/g, "")));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
 export function StackApp() {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const hydrated = useSyncExternalStore(
@@ -80,7 +86,10 @@ export function StackApp() {
   const [mode, setMode] = useState<Mode>("bet");
   const [editingSetup, setEditingSetup] = useState(false);
   const [customStack, setCustomStack] = useState("");
-  const [flash, setFlash] = useState<"bet" | "collect" | "set" | null>(null);
+  const [customCollect, setCustomCollect] = useState("");
+  const [flash, setFlash] = useState<"bet" | "collect" | "set" | "round" | null>(
+    null,
+  );
   const [tick, setTick] = useState(0);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -95,7 +104,7 @@ export function StackApp() {
     };
   }, []);
 
-  function pulse(kind: "bet" | "collect" | "set") {
+  function pulse(kind: "bet" | "collect" | "set" | "round") {
     if (flashTimer.current) clearTimeout(flashTimer.current);
     setFlash(kind);
     setTick((t) => t + 1);
@@ -104,6 +113,7 @@ export function StackApp() {
 
   function setStack(amount: number) {
     const next = Math.max(0, Math.floor(amount));
+    const firstNight = !memoryState.started;
     patchState({
       stack: next,
       started: true,
@@ -111,6 +121,9 @@ export function StackApp() {
         memoryState.selectedBet || 100,
         Math.max(25, next || 100),
       ),
+      ...(firstNight
+        ? { round: 1, roundBet: 0, lastBet: 0 }
+        : {}),
     });
     pulse("set");
     setEditingSetup(false);
@@ -118,6 +131,9 @@ export function StackApp() {
 
   function selectAmount(amount: number) {
     patchState({ selectedBet: amount });
+    if (mode === "collect") {
+      setCustomCollect(amount > 0 ? String(amount) : "");
+    }
   }
 
   function commitBet() {
@@ -127,20 +143,42 @@ export function StackApp() {
     patchState({
       stack: state.stack - bet,
       lastBet: bet,
+      roundBet: state.roundBet + bet,
     });
     pulse("bet");
   }
 
-  function collectWin() {
-    if (state.selectedBet <= 0) return;
-    const amount = Math.max(1, state.selectedBet);
-    patchState({ stack: state.stack + amount });
+  function collectWin(amount: number) {
+    if (amount <= 0) return;
+    patchState({
+      stack: state.stack + amount,
+      selectedBet: amount,
+    });
+    setCustomCollect(String(amount));
     pulse("collect");
   }
 
   function goAllIn() {
     if (state.stack <= 0) return;
     patchState({ selectedBet: state.stack });
+  }
+
+  function nextRound() {
+    patchState({
+      round: state.round + 1,
+      roundBet: 0,
+    });
+    setMode("bet");
+    setCustomCollect("");
+    pulse("round");
+  }
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    if (next === "collect" && state.roundBet > 0) {
+      patchState({ selectedBet: state.roundBet });
+      setCustomCollect(String(state.roundBet));
+    }
   }
 
   if (!hydrated) {
@@ -159,8 +197,8 @@ export function StackApp() {
         <header className="slab-head">
           <p className="brand">STACK</p>
           <p className="lede">
-            Javier &amp; friends — set tonight&apos;s points. Sample points only.
-            No money. Phones face-up on the table.
+            Javier &amp; friends — set tonight&apos;s points, then play round by
+            round. Sample points only. No money. Phones face-up on the table.
           </p>
         </header>
 
@@ -181,8 +219,8 @@ export function StackApp() {
           className="setup-custom"
           onSubmit={(e) => {
             e.preventDefault();
-            const n = Math.floor(Number(customStack.replace(/,/g, "")));
-            if (!Number.isFinite(n) || n <= 0) return;
+            const n = parsePositiveInt(customStack);
+            if (n === null) return;
             setStack(n);
           }}
         >
@@ -220,12 +258,20 @@ export function StackApp() {
 
   const canBet = state.stack > 0 && state.selectedBet > 0;
   const betAmount = Math.min(state.selectedBet, state.stack);
+  const collectAmount =
+    mode === "collect"
+      ? parsePositiveInt(customCollect) ??
+        (state.selectedBet > 0 ? state.selectedBet : null)
+      : null;
+  const canCollect = collectAmount !== null && collectAmount > 0;
   const primaryLabel =
     mode === "bet"
       ? state.stack <= 0
         ? "Busted"
         : `Commit ${formatPoints(betAmount)}`
-      : `Collect ${formatPoints(state.selectedBet)}`;
+      : canCollect
+        ? `Collect ${formatPoints(collectAmount)}`
+        : "Collect";
 
   return (
     <div
@@ -246,8 +292,16 @@ export function StackApp() {
             Set stack
           </button>
         </div>
+        <p className="round-line" aria-live="polite">
+          <span className="round-num">Round {state.round}</span>
+          <span className="round-sep" aria-hidden="true">
+            ·
+          </span>
+          <span className="round-street">this street</span>
+        </p>
         <p className="lede lede--tight">
-          Points for the table tonight. Sample only — no real money.
+          Bet each street. Collect if you win. Next round clears this-round bets.
+          Sample only — no real money.
         </p>
       </header>
 
@@ -256,12 +310,20 @@ export function StackApp() {
         <p key={tick} className="score-value">
           {formatPoints(state.stack)}
         </p>
-        <p className="score-meta">
-          Last bet{" "}
-          <span className="score-meta-num">
-            {state.lastBet > 0 ? formatPoints(state.lastBet) : "—"}
-          </span>
-        </p>
+        <div className="score-meta-row">
+          <p className="score-meta score-meta--emph">
+            This round{" "}
+            <span className="score-meta-num score-meta-num--citrus">
+              {formatPoints(state.roundBet)}
+            </span>
+          </p>
+          <p className="score-meta">
+            Last bet{" "}
+            <span className="score-meta-num">
+              {state.lastBet > 0 ? formatPoints(state.lastBet) : "—"}
+            </span>
+          </p>
+        </div>
       </section>
 
       <div className="mode-row" role="tablist" aria-label="Action mode">
@@ -270,7 +332,7 @@ export function StackApp() {
           role="tab"
           aria-selected={mode === "bet"}
           className={`mode-btn ${mode === "bet" ? "is-on" : ""}`}
-          onClick={() => setMode("bet")}
+          onClick={() => switchMode("bet")}
         >
           Bet
         </button>
@@ -279,7 +341,7 @@ export function StackApp() {
           role="tab"
           aria-selected={mode === "collect"}
           className={`mode-btn ${mode === "collect" ? "is-on" : ""}`}
-          onClick={() => setMode("collect")}
+          onClick={() => switchMode("collect")}
         >
           Collect
         </button>
@@ -308,23 +370,83 @@ export function StackApp() {
         ) : (
           <button
             type="button"
-            className={`chip chip--all ${state.selectedBet === state.lastBet && state.lastBet > 0 ? "is-selected" : ""}`}
-            onClick={() => state.lastBet > 0 && selectAmount(state.lastBet)}
-            disabled={state.lastBet <= 0}
+            className={`chip chip--all ${state.selectedBet === state.roundBet && state.roundBet > 0 ? "is-selected" : ""}`}
+            onClick={() => state.roundBet > 0 && selectAmount(state.roundBet)}
+            disabled={state.roundBet <= 0}
           >
-            Last
+            Round
           </button>
         )}
       </div>
 
-      <button
-        type="button"
-        className={`btn btn--commit ${mode === "collect" ? "btn--win" : ""}`}
-        onClick={mode === "bet" ? commitBet : collectWin}
-        disabled={mode === "bet" ? !canBet : state.selectedBet <= 0}
-      >
-        {primaryLabel}
-      </button>
+      {mode === "collect" ? (
+        <form
+          className="collect-custom"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const n = parsePositiveInt(customCollect);
+            if (n === null) return;
+            collectWin(n);
+          }}
+        >
+          <label className="field-label" htmlFor="custom-collect">
+            Custom collect
+          </label>
+          <div className="field-row">
+            <input
+              id="custom-collect"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              className="field-input"
+              placeholder="e.g. pot total"
+              value={customCollect}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/[^\d]/g, "");
+                setCustomCollect(digits);
+                const n = parsePositiveInt(digits);
+                if (n !== null) {
+                  patchState({ selectedBet: n });
+                }
+              }}
+            />
+            <button
+              type="submit"
+              className="btn btn--signal btn--win-signal"
+              disabled={!canCollect}
+            >
+              Add
+            </button>
+          </div>
+        </form>
+      ) : null}
+
+      <div className="action-stack">
+        <button
+          type="button"
+          className={`btn btn--commit ${mode === "collect" ? "btn--win" : ""}`}
+          onClick={() => {
+            if (mode === "bet") {
+              commitBet();
+              return;
+            }
+            if (collectAmount !== null) collectWin(collectAmount);
+          }}
+          disabled={mode === "bet" ? !canBet : !canCollect}
+        >
+          {primaryLabel}
+        </button>
+
+        <button
+          type="button"
+          className="btn btn--next"
+          onClick={nextRound}
+        >
+          Next round
+        </button>
+        <p className="next-hint">
+          After collect or fold — clears this-round bets. Stack stays.
+        </p>
+      </div>
     </div>
   );
 }
