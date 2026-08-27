@@ -33,6 +33,32 @@ function parsePositiveInt(raw: string): number | null {
   return n;
 }
 
+/** Target total streetBet options for open/raise (includes all-in total). */
+function raiseToOptions(
+  tableBet: number,
+  streetBet: number,
+  stack: number,
+): number[] {
+  const maxTo = streetBet + stack;
+  if (stack <= 0 || maxTo <= streetBet) return [];
+  const candidates = new Set<number>();
+  for (const amount of BET_AMOUNTS) {
+    if (tableBet === 0) {
+      if (amount <= maxTo) candidates.add(amount);
+    } else if (amount > tableBet && amount <= maxTo) {
+      candidates.add(amount);
+    }
+  }
+  if (tableBet > 0) {
+    const doubled = tableBet * 2;
+    if (doubled > tableBet && doubled <= maxTo) candidates.add(doubled);
+  }
+  if (maxTo > tableBet || (tableBet === 0 && maxTo > 0)) {
+    candidates.add(maxTo);
+  }
+  return [...candidates].sort((a, b) => a - b);
+}
+
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
@@ -95,7 +121,9 @@ export function RoomApp({ code }: { code: string }) {
   const [name, setName] = useState("");
   const [stackChoice, setStackChoice] = useState(DEFAULT_STACK);
   const [customStack, setCustomStack] = useState("");
-  const [selectedAmount, setSelectedAmount] = useState(100);
+  const [raiseTo, setRaiseTo] = useState(100);
+  const [customRaise, setCustomRaise] = useState("");
+  const [raiseOpen, setRaiseOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -308,13 +336,12 @@ export function RoomApp({ code }: { code: string }) {
     );
   }
 
-  const canBet = !me.folded && me.stack > 0 && selectedAmount > 0;
-  const betAmount = Math.min(selectedAmount, me.stack);
   const canCollect = room.pot > 0;
   const tableBet = maxStreetBet(room);
   const callAmount = callAmountFor(room, me);
   const canCall = callAmount > 0;
-  const callIsAllIn = canCall && callAmount === me.stack && me.streetBet + callAmount < tableBet;
+  const callIsAllIn =
+    canCall && callAmount === me.stack && me.streetBet + callAmount < tableBet;
   const callLabel = !canCall
     ? me.folded
       ? "Folded"
@@ -324,6 +351,46 @@ export function RoomApp({ code }: { code: string }) {
     : callIsAllIn
       ? `Call ${formatPoints(callAmount)} · all in`
       : `Call ${formatPoints(callAmount)}`;
+
+  const raiseOptions = raiseToOptions(tableBet, me.streetBet, me.stack);
+  const opening = tableBet === 0;
+  const effectiveRaiseTo =
+    parsePositiveInt(customRaise) ??
+    (raiseTo > 0 ? raiseTo : raiseOptions[0] ?? 0);
+  const raisePutIn = Math.max(0, effectiveRaiseTo - me.streetBet);
+  const raiseChips = Math.min(raisePutIn, me.stack);
+  const canRaise =
+    !me.folded &&
+    me.stack > 0 &&
+    raiseChips > 0 &&
+    (opening
+      ? effectiveRaiseTo > 0
+      : effectiveRaiseTo > tableBet || raiseChips === me.stack);
+  const raiseIsAllIn = canRaise && raiseChips === me.stack;
+  const raiseConfirmLabel = opening
+    ? raiseIsAllIn
+      ? `Bet ${formatPoints(raiseChips)} · all in`
+      : `Bet ${formatPoints(raiseChips)}`
+    : raiseIsAllIn && me.streetBet + raiseChips <= tableBet
+      ? `All in ${formatPoints(raiseChips)}`
+      : raiseIsAllIn
+        ? `Raise to ${formatPoints(me.streetBet + raiseChips)} · all in`
+        : `Raise to ${formatPoints(effectiveRaiseTo)}`;
+
+  const myStreetBet = me.streetBet;
+  const myStack = me.stack;
+
+  function openRaise() {
+    const nextOpen = !raiseOpen;
+    setRaiseOpen(nextOpen);
+    if (nextOpen) {
+      const options = raiseToOptions(tableBet, myStreetBet, myStack);
+      const preferred =
+        options.find((a) => a > tableBet) ?? options[options.length - 1] ?? 0;
+      setRaiseTo(preferred);
+      setCustomRaise("");
+    }
+  }
 
   return (
     <div className="slab slab--play">
@@ -400,27 +467,6 @@ export function RoomApp({ code }: { code: string }) {
         ))}
       </ul>
 
-      <div className="chips" role="group" aria-label="Bet amounts">
-        {BET_AMOUNTS.map((amount) => (
-          <button
-            key={amount}
-            type="button"
-            className={`chip ${selectedAmount === amount ? "is-selected" : ""}`}
-            onClick={() => setSelectedAmount(amount)}
-          >
-            {formatPoints(amount)}
-          </button>
-        ))}
-        <button
-          type="button"
-          className={`chip chip--all ${selectedAmount === me.stack && me.stack > 0 ? "is-selected" : ""}`}
-          disabled={me.stack <= 0 || me.folded}
-          onClick={() => setSelectedAmount(me.stack)}
-        >
-          All in
-        </button>
-      </div>
-
       {error ? <p className="banner-error">{error}</p> : null}
 
       <div className="action-stack">
@@ -428,31 +474,108 @@ export function RoomApp({ code }: { code: string }) {
           type="button"
           className="btn btn--call"
           disabled={busy || !canCall}
-          onClick={() => void act("call")}
+          onClick={() => {
+            setRaiseOpen(false);
+            void act("call");
+          }}
         >
           {callLabel}
         </button>
+
         <button
           type="button"
-          className="btn btn--commit"
-          disabled={busy || !canBet}
-          onClick={() => void act("bet", { amount: betAmount })}
+          className={`btn btn--raise ${raiseOpen ? "is-on" : ""}`}
+          disabled={busy || me.folded || me.stack <= 0}
+          onClick={openRaise}
         >
-          {me.folded
-            ? "Folded"
-            : me.stack <= 0
-              ? "Busted"
-              : tableBet > 0
-                ? `Raise ${formatPoints(betAmount)}`
-                : `Bet ${formatPoints(betAmount)}`}
+          {opening ? "Bet" : "Raise"}
         </button>
+
+        {raiseOpen ? (
+          <div className="raise-panel">
+            <p className="field-label">
+              {opening
+                ? "Bet — open this street"
+                : "Raise to — your total this street"}
+            </p>
+            <div className="chips" role="group" aria-label="Raise sizes">
+              {raiseOptions.map((amount) => {
+                const isAllIn = amount === me.streetBet + me.stack;
+                const selected =
+                  !customRaise && raiseTo === amount;
+                return (
+                  <button
+                    key={amount}
+                    type="button"
+                    className={`chip ${isAllIn ? "chip--all" : ""} ${selected ? "is-selected" : ""}`}
+                    onClick={() => {
+                      setRaiseTo(amount);
+                      setCustomRaise("");
+                    }}
+                  >
+                    {isAllIn ? "All in" : formatPoints(amount)}
+                  </button>
+                );
+              })}
+            </div>
+
+            <form
+              className="raise-custom"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!canRaise) return;
+                setRaiseOpen(false);
+                void act("bet", { amount: raiseChips });
+              }}
+            >
+              <label className="field-label" htmlFor="custom-raise">
+                {opening ? "Custom bet" : "Custom raise to"}
+              </label>
+              <div className="field-row">
+                <input
+                  id="custom-raise"
+                  className="field-input"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder={opening ? "e.g. 75" : `over ${formatPoints(tableBet)}`}
+                  value={customRaise}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/[^\d]/g, "");
+                    setCustomRaise(digits);
+                    const n = parsePositiveInt(digits);
+                    if (n !== null) setRaiseTo(n);
+                  }}
+                />
+              </div>
+              {tableBet > 0 && effectiveRaiseTo > 0 ? (
+                <p className="raise-hint">
+                  Put in {formatPoints(raiseChips)}
+                  {raiseChips > 0
+                    ? ` → street total ${formatPoints(me.streetBet + raiseChips)}`
+                    : ""}
+                </p>
+              ) : null}
+              <button
+                type="submit"
+                className="btn btn--commit"
+                disabled={busy || !canRaise}
+              >
+                {raiseConfirmLabel}
+              </button>
+            </form>
+          </div>
+        ) : null}
+
         <button
           type="button"
           className="btn btn--fold"
           disabled={busy || me.folded}
-          onClick={() => void act("fold")}
+          onClick={() => {
+            setRaiseOpen(false);
+            void act("fold");
+          }}
         >
-          Fold street
+          Fold
         </button>
 
         <button
