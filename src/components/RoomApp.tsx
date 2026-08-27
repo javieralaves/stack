@@ -23,6 +23,7 @@ import {
   saveDraftName,
   saveRoomPlayerId,
 } from "@/lib/player-session";
+import { HandRankingsButton } from "@/components/HandRankingsSheet";
 
 function parsePositiveInt(raw: string): number | null {
   const n = Math.floor(Number(raw.replace(/,/g, "")));
@@ -318,13 +319,16 @@ export function RoomApp({ code }: { code: string }) {
             Solo
           </Link>
         </div>
-        <p className="round-line">
-          <span className="round-num">Round {room.round}</span>
-          <span className="round-sep" aria-hidden="true">
-            ·
-          </span>
-          <span className="round-street">room {roomCode}</span>
-        </p>
+        <div className="round-line-row">
+          <p className="round-line">
+            <span className="round-num">Round {room.round}</span>
+            <span className="round-sep" aria-hidden="true">
+              ·
+            </span>
+            <span className="round-street">room {roomCode}</span>
+          </p>
+          <HandRankingsButton />
+        </div>
         <div className="share-row">
           <button
             type="button"

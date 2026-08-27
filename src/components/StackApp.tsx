@@ -11,6 +11,7 @@ import {
   type StackState,
 } from "@/lib/storage";
 import { RoomEntry } from "@/components/RoomEntry";
+import { HandRankingsButton } from "@/components/HandRankingsSheet";
 
 type Mode = "bet" | "collect";
 
@@ -297,13 +298,16 @@ export function StackApp() {
             Set stack
           </button>
         </div>
-        <p className="round-line" aria-live="polite">
-          <span className="round-num">Round {state.round}</span>
-          <span className="round-sep" aria-hidden="true">
-            ·
-          </span>
-          <span className="round-street">this street</span>
-        </p>
+        <div className="round-line-row">
+          <p className="round-line" aria-live="polite">
+            <span className="round-num">Round {state.round}</span>
+            <span className="round-sep" aria-hidden="true">
+              ·
+            </span>
+            <span className="round-street">this street</span>
+          </p>
+          <HandRankingsButton />
+        </div>
         <p className="lede lede--tight">
           Solo phone. Bet each street. Or open a table room to share one pot.
           Sample only — no real money.
