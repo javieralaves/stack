@@ -52,6 +52,28 @@ export function findPlayer(room: Room, playerId: string): RoomPlayer | undefined
   return room.players.find((p) => p.id === playerId);
 }
 
+/** Highest street commitment among players still in (or all — max is the table). */
+export function maxStreetBet(room: Room): number {
+  let max = 0;
+  for (const p of room.players) {
+    if (p.streetBet > max) max = p.streetBet;
+  }
+  return max;
+}
+
+/**
+ * Chips this player must put in to match the table.
+ * Returns 0 when already matched or nothing to call.
+ * Caps at remaining stack (all-in call) when short.
+ */
+export function callAmountFor(room: Room, player: RoomPlayer): number {
+  if (player.folded || player.stack <= 0) return 0;
+  const table = maxStreetBet(room);
+  const need = table - player.streetBet;
+  if (need <= 0) return 0;
+  return Math.min(need, player.stack);
+}
+
 export function publicRoom(room: Room): Room {
   return room;
 }
