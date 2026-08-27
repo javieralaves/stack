@@ -13,7 +13,7 @@ Shared round + common pot across phones.
 1. On `/`, open **Play with the table** → enter first name → **Start room**.
 2. Copy invite / text the short code + URL to buddies.
 3. Buddies open `/r/CODE`, sit with a first name + stack.
-4. **Call** to match the table in one tap, **Raise** with chips, or **Fold street**.
+4. **Call**, **Raise** (or **Bet** to open), or **Fold** — raise opens presets + custom “raise to” total.
 5. Winner taps **Collect** on the pot card — takes the full pot and everyone advances to the next round.
 6. **Next round** (when pot is empty) clears folds; stacks stay; same room.
 
