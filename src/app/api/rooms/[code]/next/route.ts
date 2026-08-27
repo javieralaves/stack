@@ -18,6 +18,9 @@ export async function POST(request: Request, { params }: Params) {
     const room = await withRoomLock(code, (current) => {
       const player = findPlayer(current, playerId);
       if (!player) throw new RoomError("You are not at this table", 403);
+      if (current.pot > 0) {
+        throw new RoomError("Winner should Collect the pot first", 400);
+      }
 
       current.round += 1;
       current.pot = 0;

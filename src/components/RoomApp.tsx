@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   BET_AMOUNTS,
   DEFAULT_STACK,
@@ -16,8 +23,6 @@ import {
   saveDraftName,
   saveRoomPlayerId,
 } from "@/lib/player-session";
-
-type Mode = "bet" | "collect";
 
 function parsePositiveInt(raw: string): number | null {
   const n = Math.floor(Number(raw.replace(/,/g, "")));
@@ -87,9 +92,7 @@ export function RoomApp({ code }: { code: string }) {
   const [name, setName] = useState("");
   const [stackChoice, setStackChoice] = useState(DEFAULT_STACK);
   const [customStack, setCustomStack] = useState("");
-  const [mode, setMode] = useState<Mode>("bet");
   const [selectedAmount, setSelectedAmount] = useState(100);
-  const [customCollect, setCustomCollect] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -175,7 +178,10 @@ export function RoomApp({ code }: { code: string }) {
     }
   }
 
-  async function act(path: string, body: Record<string, unknown>): Promise<void> {
+  async function act(
+    path: string,
+    body: Record<string, unknown> = {},
+  ): Promise<void> {
     if (!playerId) return;
     setBusy(true);
     setError(null);
@@ -301,14 +307,7 @@ export function RoomApp({ code }: { code: string }) {
 
   const canBet = !me.folded && me.stack > 0 && selectedAmount > 0;
   const betAmount = Math.min(selectedAmount, me.stack);
-  const collectParsed =
-    parsePositiveInt(customCollect) ??
-    (selectedAmount > 0 ? selectedAmount : null);
-  const canCollect =
-    room.pot > 0 &&
-    collectParsed !== null &&
-    collectParsed > 0 &&
-    collectParsed <= room.pot;
+  const canCollect = room.pot > 0;
 
   return (
     <div className="slab slab--play">
@@ -327,7 +326,11 @@ export function RoomApp({ code }: { code: string }) {
           <span className="round-street">room {roomCode}</span>
         </p>
         <div className="share-row">
-          <button type="button" className="btn btn--share" onClick={() => void copyShare()}>
+          <button
+            type="button"
+            className="btn btn--share"
+            onClick={() => void copyShare()}
+          >
             {copied ? "Copied" : "Copy invite"}
           </button>
           <span className="share-url">{shareUrl.replace(/^https?:\/\//, "")}</span>
@@ -335,7 +338,17 @@ export function RoomApp({ code }: { code: string }) {
       </header>
 
       <section className="scoreboard scoreboard--room" aria-live="polite">
-        <p className="score-label">Common pot</p>
+        <div className="pot-head">
+          <p className="score-label">Common pot</p>
+          <button
+            type="button"
+            className="btn btn--pot-collect"
+            disabled={busy || !canCollect}
+            onClick={() => void act("collect")}
+          >
+            Collect
+          </button>
+        </div>
         <p className="score-value score-value--pot">{formatPoints(room.pot)}</p>
         <div className="score-meta-row">
           <p className="score-meta score-meta--emph">
@@ -368,159 +381,63 @@ export function RoomApp({ code }: { code: string }) {
         ))}
       </ul>
 
-      <div className="mode-row" role="tablist" aria-label="Action mode">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "bet"}
-          className={`mode-btn ${mode === "bet" ? "is-on" : ""}`}
-          onClick={() => setMode("bet")}
-        >
-          Bet
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "collect"}
-          className={`mode-btn ${mode === "collect" ? "is-on" : ""}`}
-          onClick={() => {
-            setMode("collect");
-            if (room.pot > 0) {
-              setSelectedAmount(room.pot);
-              setCustomCollect(String(room.pot));
-            }
-          }}
-        >
-          Collect
-        </button>
-      </div>
-
-      <div className="chips" role="group" aria-label="Amounts">
+      <div className="chips" role="group" aria-label="Bet amounts">
         {BET_AMOUNTS.map((amount) => (
           <button
             key={amount}
             type="button"
             className={`chip ${selectedAmount === amount ? "is-selected" : ""}`}
-            onClick={() => {
-              setSelectedAmount(amount);
-              if (mode === "collect") setCustomCollect(String(amount));
-            }}
+            onClick={() => setSelectedAmount(amount)}
           >
             {formatPoints(amount)}
           </button>
         ))}
-        {mode === "bet" ? (
-          <button
-            type="button"
-            className={`chip chip--all ${selectedAmount === me.stack && me.stack > 0 ? "is-selected" : ""}`}
-            disabled={me.stack <= 0 || me.folded}
-            onClick={() => setSelectedAmount(me.stack)}
-          >
-            All in
-          </button>
-        ) : (
-          <button
-            type="button"
-            className={`chip chip--all ${selectedAmount === room.pot && room.pot > 0 ? "is-selected" : ""}`}
-            disabled={room.pot <= 0}
-            onClick={() => {
-              setSelectedAmount(room.pot);
-              setCustomCollect(String(room.pot));
-            }}
-          >
-            Pot
-          </button>
-        )}
-      </div>
-
-      {mode === "collect" ? (
-        <form
-          className="collect-custom"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!canCollect || collectParsed === null) return;
-            void act("collect", { amount: collectParsed });
-          }}
+        <button
+          type="button"
+          className={`chip chip--all ${selectedAmount === me.stack && me.stack > 0 ? "is-selected" : ""}`}
+          disabled={me.stack <= 0 || me.folded}
+          onClick={() => setSelectedAmount(me.stack)}
         >
-          <label className="field-label" htmlFor="room-custom-collect">
-            From the pot
-          </label>
-          <div className="field-row">
-            <input
-              id="room-custom-collect"
-              className="field-input"
-              inputMode="numeric"
-              placeholder="Amount"
-              value={customCollect}
-              onChange={(e) => {
-                const digits = e.target.value.replace(/[^\d]/g, "");
-                setCustomCollect(digits);
-                const n = parsePositiveInt(digits);
-                if (n !== null) setSelectedAmount(n);
-              }}
-            />
-          </div>
-        </form>
-      ) : null}
+          All in
+        </button>
+      </div>
 
       {error ? <p className="banner-error">{error}</p> : null}
 
       <div className="action-stack">
-        {mode === "bet" ? (
-          <>
-            <button
-              type="button"
-              className="btn btn--commit"
-              disabled={busy || !canBet}
-              onClick={() => void act("bet", { amount: betAmount })}
-            >
-              {me.folded
-                ? "Folded"
-                : me.stack <= 0
-                  ? "Busted"
-                  : `Commit ${formatPoints(betAmount)}`}
-            </button>
-            <button
-              type="button"
-              className="btn btn--fold"
-              disabled={busy || me.folded}
-              onClick={() => void act("fold", {})}
-            >
-              Fold street
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            className="btn btn--commit btn--win"
-            disabled={busy || !canCollect}
-            onClick={() => {
-              if (collectParsed === null) return;
-              void act("collect", { amount: collectParsed });
-            }}
-          >
-            {canCollect
-              ? `Collect ${formatPoints(collectParsed)}`
-              : room.pot <= 0
-                ? "Pot empty"
-                : "Collect"}
-          </button>
-        )}
+        <button
+          type="button"
+          className="btn btn--commit"
+          disabled={busy || !canBet}
+          onClick={() => void act("bet", { amount: betAmount })}
+        >
+          {me.folded
+            ? "Folded"
+            : me.stack <= 0
+              ? "Busted"
+              : `Commit ${formatPoints(betAmount)}`}
+        </button>
+        <button
+          type="button"
+          className="btn btn--fold"
+          disabled={busy || me.folded}
+          onClick={() => void act("fold")}
+        >
+          Fold street
+        </button>
 
         <button
           type="button"
           className="btn btn--next"
-          disabled={busy}
-          onClick={() => {
-            setMode("bet");
-            setCustomCollect("");
-            void act("next", {});
-          }}
+          disabled={busy || room.pot > 0}
+          onClick={() => void act("next")}
         >
           Next round
         </button>
         <p className="next-hint">
-          Resets pot &amp; folds. Stacks stay. Same room.
+          {room.pot > 0
+            ? "Winner taps Collect on the pot — takes it and starts the next round."
+            : "Empty pot — advance the street. Stacks stay."}
         </p>
       </div>
     </div>
