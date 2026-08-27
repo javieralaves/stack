@@ -14,8 +14,8 @@ Shared round + common pot across phones.
 2. Copy invite / text the short code + URL to buddies.
 3. Buddies open `/r/CODE`, sit with a first name + stack.
 4. **Commit** bets into the common pot, or **Fold street**.
-5. Winner **Collect**s from the pot (chips, pot shortcut, or custom ≤ pot).
-6. **Next round** clears pot/folds; stacks stay; same room.
+5. Winner taps **Collect** on the pot card — takes the full pot and everyone advances to the next round.
+6. **Next round** (when pot is empty) clears folds; stacks stay; same room.
 
 Polling every ~1.5s. Max 4 seats (designed for 3).
 
