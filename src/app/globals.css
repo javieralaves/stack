@@ -839,6 +839,21 @@ button:disabled {
   text-align: right;
 }
 
+.btn--call {
+  min-height: 5.1rem;
+  width: 100%;
+  background: var(--citrus);
+  color: #0a1200;
+  font-size: clamp(1.35rem, 5.5vw, 1.7rem);
+  box-shadow: 0 10px 0 var(--citrus-deep);
+  transform: translateY(0);
+}
+
+.btn--call:active:not(:disabled) {
+  transform: translateY(6px);
+  box-shadow: 0 4px 0 var(--citrus-deep);
+}
+
 .btn--fold {
   min-height: 3.6rem;
   width: 100%;

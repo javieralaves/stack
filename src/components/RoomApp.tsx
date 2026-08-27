@@ -11,8 +11,10 @@ import {
 } from "react";
 import {
   BET_AMOUNTS,
+  callAmountFor,
   DEFAULT_STACK,
   formatPoints,
+  maxStreetBet,
   STACK_PRESETS,
   type Room,
   type RoomPlayer,
@@ -309,6 +311,19 @@ export function RoomApp({ code }: { code: string }) {
   const canBet = !me.folded && me.stack > 0 && selectedAmount > 0;
   const betAmount = Math.min(selectedAmount, me.stack);
   const canCollect = room.pot > 0;
+  const tableBet = maxStreetBet(room);
+  const callAmount = callAmountFor(room, me);
+  const canCall = callAmount > 0;
+  const callIsAllIn = canCall && callAmount === me.stack && me.streetBet + callAmount < tableBet;
+  const callLabel = !canCall
+    ? me.folded
+      ? "Folded"
+      : tableBet <= 0 || me.streetBet >= tableBet
+        ? "Matched"
+        : "Call"
+    : callIsAllIn
+      ? `Call ${formatPoints(callAmount)} · all in`
+      : `Call ${formatPoints(callAmount)}`;
 
   return (
     <div className="slab slab--play">
@@ -411,6 +426,14 @@ export function RoomApp({ code }: { code: string }) {
       <div className="action-stack">
         <button
           type="button"
+          className="btn btn--call"
+          disabled={busy || !canCall}
+          onClick={() => void act("call")}
+        >
+          {callLabel}
+        </button>
+        <button
+          type="button"
           className="btn btn--commit"
           disabled={busy || !canBet}
           onClick={() => void act("bet", { amount: betAmount })}
@@ -419,7 +442,9 @@ export function RoomApp({ code }: { code: string }) {
             ? "Folded"
             : me.stack <= 0
               ? "Busted"
-              : `Commit ${formatPoints(betAmount)}`}
+              : tableBet > 0
+                ? `Raise ${formatPoints(betAmount)}`
+                : `Bet ${formatPoints(betAmount)}`}
         </button>
         <button
           type="button"
